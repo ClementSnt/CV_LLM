@@ -1,15 +1,13 @@
-# Imports
+# 1️⃣ Imports
 import os
+import streamlit as st
 from sentence_transformers import SentenceTransformer
 import chromadb
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
-import streamlit as st
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 
-# Configuration Chroma
+# 2️⃣ Configuration Chroma
 chroma_client = chromadb.Client()
 
-# Récupérer la collection
 try:
     collection = chroma_client.get_collection("cv_llm")
 except:
@@ -36,36 +34,36 @@ except:
         ids=[f"doc_{i}" for i in range(len(documents))],
         metadatas=[{"source": s} for s in sources]
     )
+    print("✅ Collection 'cv_llm' created and filled!")
 
-
-# Modèle Flan-T5 Large
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
-
+# 3️⃣ Modèle Flan-T5 Large en 8-bit
 model_name = "google/flan-t5-large"
-
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(
+    model_name,
+    load_in_8bit=True,      # réduit la mémoire GPU
+    device_map="auto"       # utilise GPU si dispo
+)
+
 generator = pipeline(
     "text2text-generation",
     model=model,
     tokenizer=tokenizer
 )
 
-# Fonction pour poser une question
+# 4️⃣ Fonction de question
 def ask_cv_bot_en(query, n_docs=2):
-    # Recherche des documents les plus pertinents
+    # Recherche documents
     results = collection.query(query_texts=[query], n_results=n_docs)
+    
+    if len(results["documents"]) == 0 or len(results["documents"][0]) == 0:
+        return "Sorry, I don't have information to answer that."
+    
     context = " ".join(results["documents"][0][:n_docs])
 
-    # Prompt optimisé pour un ton chaleureux et concis
     prompt = f"""
-You are Clément, a business analyst and data scientist. 
-Answer the question below **in English only**, using "I" statements. 
-Be concise, friendly, and natural. 
-Use the context to create **complete sentences**, do not list bullet points, and **do not add any information that is not present in the context**. 
-Stick strictly to the facts provided.
-
-
+Answer the question below using only the context. 
+Do not invent anything. Be concise, factual, and use full sentences.
 
 Context:
 {context}
@@ -73,34 +71,29 @@ Context:
 Question: {query}
 Answer:
 """
-
     answer = generator(
         prompt,
-        max_new_tokens=120,   # limite la longueur
-        do_sample=True,       # active la génération aléatoire pour plus de naturel
-        temperature=0.8,      # variation du style
-        top_p=0.8             # nucleus sampling
+        max_new_tokens=120,
+        do_sample=True,
+        temperature=0.7,
+        top_p=0.8
     )[0]["generated_text"]
 
-    # Nettoyage : ne garder que la partie après "Answer:"
     if "Answer:" in answer:
         answer = answer.split("Answer:")[-1].strip()
 
     return answer
 
-
-# Interface du chatbot Geronimo
+# 5️⃣ Interface Streamlit
 st.set_page_config(page_title="CV Chatbot", page_icon="🤖")
-
 st.title("Clément's CV Chatbot 🤖")
-st.write("Ask me short questions about my experience, skills, projects or hobbies. Note that answers might take up to 4min to be generated as I use a free plan")
+st.write("Ask me questions about my experience, skills, projects or hobbies. Responses might take a few seconds.")
 
-# Champ pour saisir la question
-user_question = st.text_input("Your question in english:", "")
+user_question = st.text_input("Your question in English:")
 
 if user_question:
-    # Appel de la fonction que tu as déjà définie
     answer = ask_cv_bot_en(user_question, n_docs=2)
     st.markdown(f"**Answer:** {answer}")
+
 
 
