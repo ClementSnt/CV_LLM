@@ -28,6 +28,7 @@ Exemples de questions :
 - What do you do at Disney?  
 - What projects have you done?  
 - What are your hobbies?
+- What do you prefer in your job ?
 
 
 
