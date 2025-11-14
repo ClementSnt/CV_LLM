@@ -92,8 +92,9 @@ Answer:
 # Interface du chatbot Geronimo
 st.set_page_config(page_title="CV Chatbot", page_icon="🤖")
 
-st.title("🪶 Geronimo-LLM 🧠 - Clément's CV Chatbot 🤖")
-st.write("Ask me questions about my experience, skills, projects or hobbies. Note that answers might take up to 4min to be generated as I use a free plan")
+st.title("Clément's CV Chatbot 🤖")
+st.write("Ask me short questions about my experience, skills, projects or hobbies.
+Note that answers might take up to 4min to be generated as I use a free plan")
 
 # Champ pour saisir la question
 user_question = st.text_input("Your question:", "")
