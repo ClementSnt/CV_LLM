@@ -1,10 +1,9 @@
-# Installations
-!pip install -q sentence-transformers chromadb transformers accelerate
-
 # Imports
 import os
 from sentence_transformers import SentenceTransformer
 import chromadb
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
+import streamlit as st
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 
 # Configuration Chroma
@@ -91,8 +90,6 @@ Answer:
 
 
 # Interface du chatbot Geronimo
-import streamlit as st
-
 st.set_page_config(page_title="CV Chatbot", page_icon="🤖")
 
 st.title("Clément's CV Chatbot 🤖")
