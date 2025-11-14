@@ -1,0 +1,3 @@
+I have worked on several data projects. I created an NLP model to classify RATP incidents and compare different lines, an XGBoost model to forecast daily revenues, and an Ironman training dashboard using Strava API to track my performance and predict race times.  
+I also built a financial dashboard with AlphaVantage API to compare company ratios and support investment decisions.  
+Additionally, I implemented several API projects to extract weather or football data, and a CV chatbot to describe my resume and projects. All of these are available on my GitHub page.
