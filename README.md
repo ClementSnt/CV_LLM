@@ -25,7 +25,7 @@ Le chatbot utilise :
 
 Exemples de questions :
 - What are your main data science skills?  
-- Can you explain your tasks at Disney?  
+- What do you do at Disney?  
 - What projects have you done?  
 - What are your hobbies?
 
