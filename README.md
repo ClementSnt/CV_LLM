@@ -14,7 +14,7 @@ Le chatbot utilise :
 
 ## Limitations !!!!!
 - Flan-T5 Large nécessite beaucoup de mémoire GPU et plante réguliérement sur Streamlit, je n'utilise pas d'autre plan payant pouvant compenser
-- Les modèles plus légers (T5-Base, T5-Small) donnent des réponses quasiment systématiquement à côté, cela peut aussi arriver avec T5-Large mais moins souvent. J'aurais aimé tester avec des modèles plus large et notament MistralAI mais beaucoup trop lourd pour mon setup
+- Les modèles plus légers (T5-Base, T5-Small) donnent des réponses quasiment systématiquement à côté de la plaque, cela peut aussi arriver avec T5-Large mais moins souvent. J'aurais aimé tester avec des modèles plus large et notament MistralAI mais beaucoup trop lourd pour mon setup
 - Le chatbot ne peut répondre qu’aux questions dont les informations sont présentes dans les documents 
 
 
