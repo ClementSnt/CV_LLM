@@ -1,6 +1,5 @@
 streamlit
 sentence-transformers
-chromadb
 transformers
-accelerate
 torch
+sentencepiece
