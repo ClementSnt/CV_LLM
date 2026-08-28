@@ -6,10 +6,6 @@ from sentence_transformers import SentenceTransformer, util
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 
 
-# --------------------------------------------------
-# Configuration
-# --------------------------------------------------
-
 st.set_page_config(
     page_title="Clément's CV Chatbot",
     page_icon="🤖"
@@ -19,10 +15,8 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 GENERATION_MODEL = "google/flan-t5-small"
 
 
-# --------------------------------------------------
-# Chargement des données
-# --------------------------------------------------
 
+# Chargement des données
 @st.cache_data
 def load_documents():
 
@@ -42,20 +36,16 @@ def load_documents():
     return documents
 
 
-# --------------------------------------------------
-# Chargement du modèle d'embeddings
-# --------------------------------------------------
 
+# Chargement du modèle d'embeddings
 @st.cache_resource
 def load_embedding_model():
 
     return SentenceTransformer(EMBEDDING_MODEL)
 
 
-# --------------------------------------------------
-# Chargement de FLAN-T5
-# --------------------------------------------------
 
+# Chargement de FLAN-T5
 @st.cache_resource
 def load_generator():
 
@@ -76,9 +66,7 @@ def load_generator():
     return generator
 
 
-# --------------------------------------------------
 # Création des embeddings
-# --------------------------------------------------
 
 @st.cache_resource
 def create_embeddings(_embedding_model, documents):
@@ -90,10 +78,7 @@ def create_embeddings(_embedding_model, documents):
     )
 
 
-# --------------------------------------------------
 # Recherche des informations pertinentes
-# --------------------------------------------------
-
 def retrieve_context(
     question,
     documents,
@@ -126,10 +111,7 @@ def retrieve_context(
     return "\n\n".join(selected_documents)
 
 
-# --------------------------------------------------
 # Réponse du chatbot
-# --------------------------------------------------
-
 def ask_cv_bot(
     question,
     documents,
@@ -172,10 +154,6 @@ Answer:
     return result[0]["generated_text"].strip()
 
 
-# --------------------------------------------------
-# Initialisation
-# --------------------------------------------------
-
 documents = load_documents()
 
 embedding_model = load_embedding_model()
@@ -188,10 +166,7 @@ document_embeddings = create_embeddings(
 generator = load_generator()
 
 
-# --------------------------------------------------
 # Interface Streamlit
-# --------------------------------------------------
-
 st.title("Clément's CV Chatbot 🤖")
 
 st.write(
