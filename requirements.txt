@@ -1,5 +1,5 @@
 streamlit
 sentence-transformers
-transformers
+transformers==4.57.0
 torch
 sentencepiece
