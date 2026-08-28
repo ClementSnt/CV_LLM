@@ -6,9 +6,9 @@ from sentence_transformers import SentenceTransformer, util
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 
 
-# ---------------------------------------------------------
-# CONFIG
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Configuration
+# --------------------------------------------------
 
 st.set_page_config(
     page_title="Clément's CV Chatbot",
@@ -16,102 +16,45 @@ st.set_page_config(
 )
 
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-
-# Plus léger que flan-t5-large
-GENERATION_MODEL = "google/flan-t5-base"
+GENERATION_MODEL = "google/flan-t5-small"
 
 
-# ---------------------------------------------------------
-# LOAD DOCUMENTS
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Chargement des données
+# --------------------------------------------------
 
 @st.cache_data
 def load_documents():
+
     documents = []
 
     for filename in os.listdir("data"):
+
         if filename.endswith(".txt"):
+
             path = os.path.join("data", filename)
 
-            with open(path, "r", encoding="utf-8") as f:
-                text = f.read().strip()
+            with open(path, "r", encoding="utf-8") as file:
+                text = file.read().strip()
 
-                documents.append({
-                    "source": filename,
-                    "text": text
-                })
+            documents.append(text)
 
     return documents
 
 
-# ---------------------------------------------------------
-# SPLIT DOCUMENTS INTO SMALLER CHUNKS
-# ---------------------------------------------------------
-
-@st.cache_data
-def create_chunks(documents, chunk_size=700):
-    chunks = []
-
-    for document in documents:
-        text = document["text"]
-
-        # Découpe simple par paragraphes
-        paragraphs = [
-            p.strip()
-            for p in text.split("\n\n")
-            if p.strip()
-        ]
-
-        current_chunk = ""
-
-        for paragraph in paragraphs:
-
-            if len(current_chunk) + len(paragraph) <= chunk_size:
-                current_chunk += "\n" + paragraph
-
-            else:
-                if current_chunk:
-                    chunks.append({
-                        "source": document["source"],
-                        "text": current_chunk.strip()
-                    })
-
-                current_chunk = paragraph
-
-        if current_chunk:
-            chunks.append({
-                "source": document["source"],
-                "text": current_chunk.strip()
-            })
-
-    return chunks
-
-
-# ---------------------------------------------------------
-# LOAD EMBEDDING MODEL
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Chargement du modèle d'embeddings
+# --------------------------------------------------
 
 @st.cache_resource
 def load_embedding_model():
+
     return SentenceTransformer(EMBEDDING_MODEL)
 
 
-# ---------------------------------------------------------
-# CREATE EMBEDDINGS
-# ---------------------------------------------------------
-
-@st.cache_resource
-def create_embeddings(_embedding_model, texts):
-    return _embedding_model.encode(
-        list(texts),
-        convert_to_tensor=True,
-        normalize_embeddings=True
-    )
-
-
-# ---------------------------------------------------------
-# LOAD GENERATION MODEL
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Chargement de FLAN-T5
+# --------------------------------------------------
 
 @st.cache_resource
 def load_generator():
@@ -124,177 +67,152 @@ def load_generator():
         GENERATION_MODEL
     )
 
-    return pipeline(
+    generator = pipeline(
         "text2text-generation",
         model=model,
         tokenizer=tokenizer
     )
 
+    return generator
 
-# ---------------------------------------------------------
-# RETRIEVE RELEVANT INFORMATION
-# ---------------------------------------------------------
+
+# --------------------------------------------------
+# Création des embeddings
+# --------------------------------------------------
+
+@st.cache_resource
+def create_embeddings(_embedding_model, documents):
+
+    return _embedding_model.encode(
+        list(documents),
+        convert_to_tensor=True,
+        normalize_embeddings=True
+    )
+
+
+# --------------------------------------------------
+# Recherche des informations pertinentes
+# --------------------------------------------------
 
 def retrieve_context(
-    query,
+    question,
+    documents,
     embedding_model,
-    chunk_embeddings,
-    chunks,
-    n_results=3
+    document_embeddings,
+    n_results=2
 ):
 
-    query_embedding = embedding_model.encode(
-        query,
+    question_embedding = embedding_model.encode(
+        question,
         convert_to_tensor=True,
         normalize_embeddings=True
     )
 
     scores = util.cos_sim(
-        query_embedding,
-        chunk_embeddings
+        question_embedding,
+        document_embeddings
     )[0]
 
     top_results = torch.topk(
         scores,
-        k=min(n_results, len(chunks))
+        k=min(n_results, len(documents))
     )
 
-    selected_chunks = []
+    selected_documents = [
+        documents[index]
+        for index in top_results.indices.tolist()
+    ]
 
-    for score, index in zip(
-        top_results.values,
-        top_results.indices
-    ):
-
-        selected_chunks.append({
-            "score": float(score),
-            "source": chunks[index]["source"],
-            "text": chunks[index]["text"]
-        })
-
-    return selected_chunks
+    return "\n\n".join(selected_documents)
 
 
-# ---------------------------------------------------------
-# GENERATE ANSWER
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Réponse du chatbot
+# --------------------------------------------------
 
 def ask_cv_bot(
-    query,
+    question,
+    documents,
     embedding_model,
-    chunk_embeddings,
-    chunks,
+    document_embeddings,
     generator
 ):
 
-    retrieved = retrieve_context(
-        query,
+    context = retrieve_context(
+        question,
+        documents,
         embedding_model,
-        chunk_embeddings,
-        chunks,
-        n_results=3
-    )
-
-    # Si aucun résultat n'est vraiment proche,
-    # éviter que le bot invente
-    if retrieved[0]["score"] < 0.25:
-        return (
-            "I don't have enough information in my CV "
-            "to answer this question accurately."
-        )
-
-    context = "\n\n".join(
-        item["text"]
-        for item in retrieved
+        document_embeddings
     )
 
     prompt = f"""
-You are Clément's CV assistant.
+Answer the recruiter's question using only the information in the context.
 
-Your job is to answer questions about Clément's professional experience,
-education, skills and personal projects.
-
-Rules:
-- Answer in English.
-- Speak in the first person ("I").
-- Answer naturally, as if Clément was answering a recruiter.
-- Keep the answer concise: usually 2 to 4 sentences.
-- Use only information provided in the context.
-- Do not invent experience, skills or achievements.
-- If the context does not contain enough information, say so.
-- Prefer concrete facts over generic statements.
-- When relevant, connect related information from several parts of the context.
+Speak as Clément using "I".
+Answer in English.
+Be concise and natural.
+Do not invent information.
+If the answer is not in the context, say that you do not have enough information.
 
 Context:
 {context}
 
-Recruiter's question:
-{query}
+Question:
+{question}
 
 Answer:
 """
 
-    output = generator(
+    result = generator(
         prompt,
-        max_new_tokens=130,
-        do_sample=False,
-        num_beams=2,
-        repetition_penalty=1.15
+        max_new_tokens=100,
+        do_sample=False
     )
 
-    return output[0]["generated_text"].strip()
+    return result[0]["generated_text"].strip()
 
 
-# ---------------------------------------------------------
-# INITIALISATION
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Initialisation
+# --------------------------------------------------
 
 documents = load_documents()
 
-chunks = create_chunks(documents)
-
 embedding_model = load_embedding_model()
 
-chunk_texts = tuple(
-    chunk["text"]
-    for chunk in chunks
-)
-
-chunk_embeddings = create_embeddings(
+document_embeddings = create_embeddings(
     embedding_model,
-    chunk_texts
+    tuple(documents)
 )
 
 generator = load_generator()
 
 
-# ---------------------------------------------------------
-# INTERFACE
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Interface Streamlit
+# --------------------------------------------------
 
 st.title("Clément's CV Chatbot 🤖")
 
 st.write(
-    """
-Ask me questions about my experience, skills,
-education or projects.
-"""
+    "Ask me questions about my experience, skills, projects or education."
 )
 
-user_question = st.text_input(
+question = st.text_input(
     "Your question:",
     placeholder="What experience do you have in forecasting?"
 )
 
-if user_question:
+
+if question:
 
     with st.spinner("Thinking..."):
 
         answer = ask_cv_bot(
-            user_question,
+            question,
+            documents,
             embedding_model,
-            chunk_embeddings,
-            chunks,
+            document_embeddings,
             generator
         )
 
